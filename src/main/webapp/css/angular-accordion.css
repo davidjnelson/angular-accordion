@@ -1,0 +1,53 @@
+.angular-accordion-header {
+    background-color: #999;
+    color: #ffffff;
+    padding: 10px;
+    -webkit-border-top-left-radius: 5px;
+    -webkit-border-top-right-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.angular-accordion-container {
+    margin: 3px;
+}
+
+.angularaccordionheaderselected {
+    background-color: lightgray;
+    color: #333;
+}
+
+.angular-accordion-header:hover {
+    text-decoration: underline !important;
+}
+
+.angularaccordionheaderselected:hover {
+    text-decoration: underline !important;
+}
+
+.angular-accordion-pane {
+    padding: 25px;
+    margin: 0;
+    overflow-y: auto;
+}
+
+.fade-hide-setup, .fade-show-setup {
+    -webkit-transition: all 1s ease;
+    -moz-transition: all 1s ease;
+    -o-transition: all 1s ease;
+    transition: all 1s ease;
+}
+
+.fade-hide-setup {
+    height: auto;
+}
+.fade-hide-setup.fade-hide-start {
+    height: 0;
+}
+
+.fade-show-setup {
+    height:0;
+}
+.fade-show-setup.fade-show-start {
+    height: auto;
+}
