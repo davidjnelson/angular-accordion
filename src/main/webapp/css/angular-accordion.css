@@ -30,24 +30,3 @@
     margin: 0;
     overflow-y: auto;
 }
-
-.fade-hide-setup, .fade-show-setup {
-    -webkit-transition: all 1s ease;
-    -moz-transition: all 1s ease;
-    -o-transition: all 1s ease;
-    transition: all 1s ease;
-}
-
-.fade-hide-setup {
-    height: auto;
-}
-.fade-hide-setup.fade-hide-start {
-    height: 0;
-}
-
-.fade-show-setup {
-    height:0;
-}
-.fade-show-setup.fade-show-start {
-    height: auto;
-}
