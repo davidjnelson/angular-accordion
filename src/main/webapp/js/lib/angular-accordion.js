@@ -17,7 +17,7 @@ angular.module('angular-accordion', [])
     })
     .directive('angularAccordionPane', function() {
         return {
-            restrict: 'E',
+            restrict: 'EA',
             template:
                 '<div class="angular-accordion-container">' +
                     '<div class="angular-accordion-header" ng-click="collapse()" ng-class="{ angularaccordionheaderselected: isActive }">' +
