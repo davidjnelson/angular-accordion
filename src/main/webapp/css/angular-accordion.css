@@ -6,6 +6,8 @@
     -webkit-border-top-right-radius: 5px;
     cursor: pointer;
     text-decoration: none;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
 }
 
 .angular-accordion-container {
@@ -13,8 +15,9 @@
 }
 
 .angularaccordionheaderselected {
-    background-color: lightgray;
+    background-color: #bbb;
     color: #333;
+    font-weight: bold;
 }
 
 .angular-accordion-header:hover {
@@ -27,6 +30,12 @@
 
 .angular-accordion-pane {
     padding: 25px;
-    margin: 0;
     overflow-y: auto;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    border-left: 1px solid #bbb;
+    border-right: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+    -webkit-border-bottom-left-radius: 5px;
+    -webkit-border-bottom-right-radius: 5px;
 }

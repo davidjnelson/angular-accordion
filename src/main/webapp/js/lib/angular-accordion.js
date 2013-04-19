@@ -19,8 +19,8 @@ angular.module('angular-accordion', [])
         return {
             restrict: 'E',
             template:
-                '<div class="angular-accordion-container" ng-click="collapse()">' +
-                    '<div class="angular-accordion-header"  ng-class="{ angularaccordionheaderselected: isActive }">' +
+                '<div class="angular-accordion-container">' +
+                    '<div class="angular-accordion-header" ng-click="collapse()" ng-class="{ angularaccordionheaderselected: isActive }">' +
                         '{{ title }}</div>' +
                     '<div class="angular-accordion-pane" style="overflow: auto;" ng-transclude></div>' +
                 '</div>',
@@ -32,12 +32,29 @@ angular.module('angular-accordion', [])
                 $scope.isActive = false;
             }],
             link: function(scope, element, attributes, controller) {
-                var getComputedStyleAsNumber = function(element, style) {
-                    // TODO: extract the jquery getComputedStyle implementation to remove the jquery dependency
-                    return parseInt($(element).css(style).replace('px', ''));
+                scope.previousStyles = {};
 
-                    // TODO: remove jquery dependency here by using the following (working, tested) code non IE9< browsers
-                    // return parseInt(window.getComputedStyle(element, null).getPropertyValue(style).replace('px', ''));
+                var heightPaddingBorderMarginZeroed = {
+                    'padding-top': '0px',
+                    'padding-bottom': '0px',
+                    'border-top': '0px',
+                    'border-bottom': '0px',
+                    'margin-top': '0px',
+                    'margin-bottom': '0px',
+                    'height': '0px'
+                };
+
+                var convertCssNumberToJavascriptNumber = function(cssNumber) {
+                    if(typeof(cssNumber) === 'undefined') {
+                        return 0;
+                    }
+
+                    return parseInt(cssNumber.split(' ')[0].replace('px', ''));
+                };
+
+                var getComputedStyleAsNumber = function(element, style) {
+                    // TODO: remove the jquery dependency here by extracting the jquery or similar getComputedStyle implementation that works in IE9<
+                    return convertCssNumberToJavascriptNumber($(element).css(style));
                 };
 
                 var getElementPaddingMarginAndBorderHeight = function(element) {
@@ -64,6 +81,16 @@ angular.module('angular-accordion', [])
                     });
                 };
 
+                var objectIsEmpty = function(object) {
+                    for(var property in object) {
+                        if(object.hasOwnProperty(property)) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                };
+
                 scope.calculatePaneContentHeight = function(paneContainerJqLite, paneTitleJqLite, paneContentJqLite) {
                     var paneContainerElement = paneContainerJqLite[0];
                     var paneTitleElement = paneTitleJqLite[0];
@@ -80,7 +107,7 @@ angular.module('angular-accordion', [])
                     var paneTitleOuterHeightTimesPaneCount = paneTitleOuterHeight * panesCount;
                     // paneContainerPaddingMarginAndBorderHeight accounts for the margin on the top of the first accordion and the bottom of the last one
                     var paneHeight = (containerHeight - (paneContainerPaddingMarginAndBorderHeight + panesCountMinusOneTimesPaneContainerPaddingMarginAndWidthDividedByTwo +
-                        paneTitleOuterHeightTimesPaneCount + paneContentPaddingMarginAndBorderHeight)) - (scope.previousPaddingTop + scope.previousPaddingBottom);
+                        paneTitleOuterHeightTimesPaneCount + paneContentPaddingMarginAndBorderHeight)) - scope.previousContentPanePaddingMarginAndBorderHeight;
 
                     return paneHeight + 'px';
                 };
@@ -93,7 +120,7 @@ angular.module('angular-accordion', [])
                     var paneContentJquery = $(element.children()[1]);
 
                     if(!scope.isActive && !force) {
-                        angular.forEach(scope.MessageBus.accordionPaneScopes, function(iteratedScope, index) {
+                        angular.forEach(scope.MessageBus.accordionPaneScopes, function(iteratedScope) {
                             iteratedScope.collapse(true);
                         });
 
@@ -103,37 +130,21 @@ angular.module('angular-accordion', [])
                         var paneTitleJqLite = angular.element(element.children()[0]);
 
                         var paneHeight = scope.calculatePaneContentHeight(paneContainerJqLite, paneTitleJqLite, paneContentJqLite);
-                        paneContentJquery.animate({
-                            'height': paneHeight,
-                            'padding-top': scope.previousPaddingTop,
-                            'padding-bottom': scope.previousPaddingBottom
-                        }, 100);
+
+                        paneContentJqLite.removeAttr('style');
+                        paneContentJqLite.css('height', '0px');
+
+                        paneContentJquery.animate({ height: paneHeight }, 100);
                     } else if(!force) {
-                            scope.isActive = false;
-
-                            paneContentJquery.animate({
-                                'height': '0px',
-                                'padding-top': '0px',
-                                'padding-bottom': '0px'
-                            }, 100);
-                    } else {
-                        if(typeof(scope.previousPaddingTop) === 'undefined') {
-                            scope.previousPaddingTop = getComputedStyleAsNumber(paneContentJqLite[0], 'padding-top');
-                        }
-
-                        if(typeof(scope.previousPaddingBottom) === 'undefined') {
-                            scope.previousPaddingBottom = getComputedStyleAsNumber(paneContentJqLite[0], 'padding-bottom');
-                        }
-
                         scope.isActive = false;
-
-                        paneContentJquery.css({
-                            'height': '0px',
-                            'padding-top': '0px',
-                            'padding-bottom': '0px'
-                        });
+                        paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
+                    } else {
+                        scope.isActive = false;
+                        paneContentJqLite.css(heightPaddingBorderMarginZeroed);
                     }
                 };
+
+                scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
 
                 scope.collapse(true);
             },
