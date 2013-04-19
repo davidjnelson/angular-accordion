@@ -10,7 +10,7 @@ angular.module('angular-accordion', [])
     .directive('angularAccordion', function() {
         return {
             restrict: 'E',
-            template: '<div ng-transclude></div>',
+            template: '<div data-ng-transclude></div>',
             replace: true,
             transclude: true
         };
@@ -20,9 +20,9 @@ angular.module('angular-accordion', [])
             restrict: 'EA',
             template:
                 '<div class="angular-accordion-container">' +
-                    '<div class="angular-accordion-header" ng-click="collapse()" ng-class="{ angularaccordionheaderselected: isActive }">' +
+                    '<div class="angular-accordion-header" data-ng-click="collapse(false)" data-ng-class="{ angularaccordionheaderselected: isActive }">' +
                         '{{ title }}</div>' +
-                    '<div class="angular-accordion-pane" style="overflow: auto;" ng-transclude></div>' +
+                    '<div class="angular-accordion-pane" style="overflow: auto;" data-ng-transclude></div>' +
                 '</div>',
             replace: true,
             transclude: true,
@@ -121,7 +121,7 @@ angular.module('angular-accordion', [])
 
                     if(!scope.isActive && !force) {
                         angular.forEach(scope.MessageBus.accordionPaneScopes, function(iteratedScope) {
-                            iteratedScope.collapse(true);
+                            iteratedScope.collapse(true, true);
                         });
 
                         scope.isActive = true;
@@ -146,7 +146,7 @@ angular.module('angular-accordion', [])
 
                 scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
 
-                scope.collapse(true);
+                scope.collapse(true, false);
             },
             scope: {
                 title: '@'
