@@ -34,6 +34,38 @@ angular.module('angular-accordion', [])
             link: function(scope, element, attributes, controller) {
                 scope.previousStyles = {};
 
+                // debounce() method is slightly modified (added brackets for conditionals and whitespace for readability) version of:
+                // Underscore.js 1.4.4
+                // http://underscorejs.org
+                // (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
+                // Underscore may be freely distributed under the MIT license.
+                var debounce = function(func, wait, immediate) {
+                    var timeout, result;
+                    return function() {
+                        var context = this,
+                            args = arguments;
+
+                        var later = function() {
+                            timeout = null;
+                            if (!immediate) {
+                                result = func.apply(context, args);
+                            }
+                        };
+
+                        var callNow = immediate && !timeout;
+
+                        clearTimeout(timeout);
+
+                        timeout = setTimeout(later, wait);
+
+                        if (callNow) {
+                            result = func.apply(context, args);
+                        }
+
+                        return result;
+                    };
+                };
+
                 var heightPaddingBorderMarginZeroed = {
                     'padding-top': '0px',
                     'padding-bottom': '0px',
@@ -93,7 +125,7 @@ angular.module('angular-accordion', [])
                     return true;
                 };
 
-                scope.calculatePaneContentHeight = function(paneContainerJqLite, paneTitleJqLite, paneContentJqLite) {
+                scope.calculatePaneContentHeight = function(paneContainerJqLite, paneTitleJqLite, paneContentJqLite, isResize) {
                     var paneContainerElement = paneContainerJqLite[0];
                     var paneTitleElement = paneTitleJqLite[0];
                     var paneContentElement = paneContentJqLite[0];
@@ -110,6 +142,10 @@ angular.module('angular-accordion', [])
                     // paneContainerPaddingMarginAndBorderHeight accounts for the margin on the top of the first accordion and the bottom of the last one
                     var paneHeight = (containerHeight - (paneContainerPaddingMarginAndBorderHeight + panesCountMinusOneTimesPaneContainerPaddingMarginAndWidthDividedByTwo +
                         paneTitleOuterHeightTimesPaneCount + paneContentPaddingMarginAndBorderHeight)) - scope.previousContentPanePaddingMarginAndBorderHeight;
+
+                    if(isResize) {
+                        paneHeight += scope.previousContentPanePaddingMarginAndBorderHeight;
+                    }
 
                     return paneHeight + 'px';
                 };
@@ -131,7 +167,7 @@ angular.module('angular-accordion', [])
                         var paneContainerJqLite = element;
                         var paneTitleJqLite = angular.element(element.children()[0]);
 
-                        var paneHeight = scope.calculatePaneContentHeight(paneContainerJqLite, paneTitleJqLite, paneContentJqLite);
+                        var paneHeight = scope.calculatePaneContentHeight(paneContainerJqLite, paneTitleJqLite, paneContentJqLite, false);
 
                         paneContentJqLite.removeAttr('style');
                         paneContentJqLite.css('height', '0px');
@@ -149,6 +185,14 @@ angular.module('angular-accordion', [])
                 scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
 
                 scope.collapse(true, false);
+
+                window.onresize = debounce(function() {
+                    var paneContainerJqLite = element;
+                    var paneTitleJqLite = angular.element(element.children()[0]);
+                    var paneContentJqLite = angular.element(element.children()[1]);
+                    var paneHeight = scope.calculatePaneContentHeight(paneContainerJqLite, paneTitleJqLite, paneContentJqLite, true);
+                    paneContentJqLite.css('height', paneHeight);
+                }, 1000);
             },
             scope: {
                 title: '@'
