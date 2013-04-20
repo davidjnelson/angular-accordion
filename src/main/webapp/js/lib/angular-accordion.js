@@ -45,7 +45,7 @@ angular.module('angular-accordion', [])
                 };
 
                 var convertCssNumberToJavascriptNumber = function(cssNumber) {
-                    if(typeof(cssNumber) === 'undefined') {
+                    if(typeof(cssNumber) === 'undefined' || cssNumber === '') {
                         return 0;
                     }
 
@@ -54,7 +54,8 @@ angular.module('angular-accordion', [])
 
                 var getComputedStyleAsNumber = function(element, style) {
                     // TODO: remove the jquery dependency here by extracting the jquery or similar getComputedStyle implementation that works in IE9<
-                    return convertCssNumberToJavascriptNumber($(element).css(style));
+                    var computedStyle = $(element).css(style);
+                    return convertCssNumberToJavascriptNumber(computedStyle);
                 };
 
                 var getElementPaddingMarginAndBorderHeight = function(element) {
@@ -62,8 +63,9 @@ angular.module('angular-accordion', [])
                     var paddingBottom = getComputedStyleAsNumber(element, 'padding-bottom');
                     var marginTop = getComputedStyleAsNumber(element, 'margin-top');
                     var marginBottom = getComputedStyleAsNumber(element, 'margin-bottom');
-                    var borderTop = getComputedStyleAsNumber(element, 'border-top');
-                    var borderBottom = getComputedStyleAsNumber(element, 'border-bottom');
+                    // firefox requires borderTopWidth and borderBottomWidth instead of the shorthand
+                    var borderTop = getComputedStyleAsNumber(element, 'borderTopWidth');
+                    var borderBottom = getComputedStyleAsNumber(element, 'borderBottomWidth');
 
                     return paddingTop + paddingBottom + marginTop + marginBottom + borderTop + borderBottom;
                 };
