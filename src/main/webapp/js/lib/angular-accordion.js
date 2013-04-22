@@ -13,6 +13,9 @@ angular.module('angular-accordion', [])
             template: '<div data-ng-transclude></div>',
             replace: true,
             transclude: true,
+            link: function(scope, element, attributes, controller) {
+                scope.collapsedEventHandlerName = attributes.onCollapsed;
+            },
             controller: ['MessageBus', function(MessageBus) {
                 // debounce() method is slightly modified (added brackets for conditionals and whitespace for readability) version of:
                 // Underscore.js 1.4.4
@@ -181,6 +184,10 @@ angular.module('angular-accordion', [])
                     } else if(!force) {
                         scope.isActive = false;
                         paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
+
+                        if(typeof(scope.$parent.collapsedEventHandlerName) !== 'undefined') {
+                            window[scope.$parent.collapsedEventHandlerName]();
+                        }
                     } else if (!isResize) {
                         scope.isActive = false;
                         paneContentJqLite.css(heightPaddingBorderMarginZeroed);
