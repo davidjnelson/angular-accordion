@@ -9,31 +9,11 @@ angular.module('angular-accordion', [])
     })
     .directive('angularAccordion', function() {
         return {
-            restrict: 'E',
+            restrict: 'EA',
             template: '<div data-ng-transclude></div>',
             replace: true,
-            transclude: true
-        };
-    })
-    .directive('angularAccordionPane', function() {
-        return {
-            restrict: 'EA',
-            template:
-                '<div class="angular-accordion-container">' +
-                    '<div class="angular-accordion-header" data-ng-click="collapse(false)" data-ng-class="{ angularaccordionheaderselected: isActive }">' +
-                        '{{ title }}</div>' +
-                    '<div class="angular-accordion-pane" style="overflow: auto;" data-ng-transclude></div>' +
-                '</div>',
-            replace: true,
             transclude: true,
-            controller: ['$scope', 'MessageBus', function($scope, MessageBus) {
-                MessageBus.accordionPaneScopes.push($scope);
-                $scope.MessageBus = MessageBus;
-                $scope.isActive = false;
-            }],
-            link: function(scope, element, attributes, controller) {
-                scope.previousStyles = {};
-
+            controller: ['MessageBus', function(MessageBus) {
                 // debounce() method is slightly modified (added brackets for conditionals and whitespace for readability) version of:
                 // Underscore.js 1.4.4
                 // http://underscorejs.org
@@ -65,6 +45,37 @@ angular.module('angular-accordion', [])
                         return result;
                     };
                 };
+
+                window.onresize = debounce(function() {
+                    angular.forEach(MessageBus.accordionPaneScopes, function(childScope) {
+                        childScope.collapse(true, true);
+
+                        if(childScope.isActive) {
+                            var paneHeight = childScope.calculatePaneContentHeight(true);
+                            childScope.getPaneContentJqLite().css('height', paneHeight);
+                        }
+                    });
+                }, 1000);
+            }]
+        };
+    })
+    .directive('angularAccordionPane', ['MessageBus', function(MessageBus) {
+        return {
+            restrict: 'EA',
+            template:
+                '<div class="angular-accordion-container">' +
+                    '<div class="angular-accordion-header" data-ng-click="collapse(false, false)" data-ng-class="{ angularaccordionheaderselected: isActive }">' +
+                        '{{ title }}</div>' +
+                    '<div class="angular-accordion-pane" style="overflow: auto;" data-ng-transclude></div>' +
+                '</div>',
+            replace: true,
+            transclude: true,
+            controller: ['$scope', function($scope) {
+                $scope.isActive = false;
+                MessageBus.accordionPaneScopes.push($scope);
+            }],
+            link: function(scope, element, attributes, controller) {
+                scope.previousStyles = {};
 
                 var heightPaddingBorderMarginZeroed = {
                     'padding-top': '0px',
@@ -109,29 +120,19 @@ angular.module('angular-accordion', [])
                     return height + elementPaddingMarginAndBorderHeight;
                 };
 
-                var collapseAll = function() {
-                    angular.forEach(scope.MessageBus.accordionPaneScopes, function(iteratedScope, index) {
-                        iteratedScope.isActive = false;
-                    });
+                scope.getPaneContentJqLite = function() {
+                    var paneContentJqLite = angular.element(element.children()[1]);
+
+                    return paneContentJqLite;
                 };
 
-                var objectIsEmpty = function(object) {
-                    for(var property in object) {
-                        if(object.hasOwnProperty(property)) {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                };
-
-                scope.calculatePaneContentHeight = function(paneContainerJqLite, paneTitleJqLite, paneContentJqLite, isResize) {
-                    var paneContainerElement = paneContainerJqLite[0];
-                    var paneTitleElement = paneTitleJqLite[0];
-                    var paneContentElement = paneContentJqLite[0];
+                scope.calculatePaneContentHeight = function(isResize) {
+                    var paneContainerElement = element[0];
+                    var paneTitleElement = element.children()[0];
+                    var paneContentElement = element.children()[1];
 
                     var containerHeight = document.getElementById('angular-accordion-container').offsetHeight;
-                    var panesCount = scope.MessageBus.accordionPaneScopes.length;
+                    var panesCount = MessageBus.accordionPaneScopes.length;
                     var paneContainerPaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(paneContainerElement);
                     var paneTitleOuterHeight = getElementOuterHeight(paneTitleElement);
                     var paneContentPaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(paneContentElement);
@@ -150,7 +151,7 @@ angular.module('angular-accordion', [])
                     return paneHeight + 'px';
                 };
 
-                scope.collapse = function(force) {
+                scope.collapse = function(force, isResize) {
                     var paneContentJqLite = angular.element(element.children()[1]);
 
                     // TODO: remove the dependency here on jquery for non IE10< by getting the new angular css based animation working
@@ -158,16 +159,20 @@ angular.module('angular-accordion', [])
                     var paneContentJquery = $(element.children()[1]);
 
                     if(!scope.isActive && !force) {
-                        angular.forEach(scope.MessageBus.accordionPaneScopes, function(iteratedScope) {
-                            iteratedScope.collapse(true, true);
+                        angular.forEach(MessageBus.accordionPaneScopes, function(iteratedScope) {
+                            iteratedScope.collapse(true, false);
                         });
 
                         scope.isActive = true;
 
-                        var paneContainerJqLite = element;
-                        var paneTitleJqLite = angular.element(element.children()[0]);
+                        // update this scope in the messagebus list of scopes so we have it for resize operations
+                        angular.forEach(MessageBus.accordionPaneScopes, function(iteratedScope, index) {
+                            if(iteratedScope.$id == scope.$id) {
+                                MessageBus.accordionPaneScopes[index].isActive = true;
+                            }
+                        });
 
-                        var paneHeight = scope.calculatePaneContentHeight(paneContainerJqLite, paneTitleJqLite, paneContentJqLite, false);
+                        var paneHeight = scope.calculatePaneContentHeight(false);
 
                         paneContentJqLite.removeAttr('style');
                         paneContentJqLite.css('height', '0px');
@@ -176,7 +181,7 @@ angular.module('angular-accordion', [])
                     } else if(!force) {
                         scope.isActive = false;
                         paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
-                    } else {
+                    } else if (!isResize) {
                         scope.isActive = false;
                         paneContentJqLite.css(heightPaddingBorderMarginZeroed);
                     }
@@ -185,17 +190,9 @@ angular.module('angular-accordion', [])
                 scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
 
                 scope.collapse(true, false);
-
-                window.onresize = debounce(function() {
-                    var paneContainerJqLite = element;
-                    var paneTitleJqLite = angular.element(element.children()[0]);
-                    var paneContentJqLite = angular.element(element.children()[1]);
-                    var paneHeight = scope.calculatePaneContentHeight(paneContainerJqLite, paneTitleJqLite, paneContentJqLite, true);
-                    paneContentJqLite.css('height', paneHeight);
-                }, 1000);
             },
             scope: {
                 title: '@'
             }
         };
-    });
+    }]);
