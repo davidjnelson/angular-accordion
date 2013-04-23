@@ -17,7 +17,7 @@ angular.module('angular-accordion', [])
 
                 // we know how many children (accordion panes) there are by poking the pre-rendered dom.  for this accordion,
                 // dynamically adding panes is not one of its goals.  as such, we can simply find out if all the child
-                // directives loaded by checking the count every 10 milliseconds.
+                // directives loaded by checking the count every millisecond (it's ready on the first check).
                 var childCount = element.children().length;
 
                 $timeout(function() {
@@ -75,8 +75,8 @@ angular.module('angular-accordion', [])
                 };
 
                 window.onresize = debounce(function() {
-                    $scope.restoreActiveScope(true), 1000
-                });
+                    $scope.restoreActiveScope(true);
+                }, 50);
             }]
         };
     }])
