@@ -1,13 +1,12 @@
-//noinspection JSValidateTypes
 angular.module('angular-accordion', [])
-    .service('MessageBus', function() {
+    .service('AngularAccordionMessageBus', function() {
         var self = this;
 
         self.accordionPaneScopes = [];
 
         return self;
     })
-    .directive('angularAccordion', function() {
+    .directive('angularAccordion', ['AngularAccordionMessageBus', '$timeout', function(AngularAccordionMessageBus, $timeout) {
         return {
             restrict: 'EA',
             template: '<div data-ng-transclude></div>',
@@ -15,21 +14,35 @@ angular.module('angular-accordion', [])
             transclude: true,
             link: function(scope, element, attributes, controller) {
                 scope.collapsedEventHandlerName = attributes.onCollapsed;
+
+                // we know how many children (accordion panes) there are by poking the pre-rendered dom.  for this accordion,
+                // dynamically adding panes is not one of its goals.  as such, we can simply find out if all the child
+                // directives loaded by checking the count every 10 milliseconds.
+                var childCount = element.children().length;
+
+                $timeout(function() {
+                    if(AngularAccordionMessageBus.accordionPaneScopes.length === childCount) {
+                        scope.restoreActiveScope(false);
+                    }
+                }, 1);
             },
-            controller: ['MessageBus', function(MessageBus) {
+            controller: ['$scope', function($scope) {
                 // debounce() method is slightly modified (added brackets for conditionals and whitespace for readability) version of:
                 // Underscore.js 1.4.4
                 // http://underscorejs.org
                 // (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
                 // Underscore may be freely distributed under the MIT license.
                 var debounce = function(func, wait, immediate) {
-                    var timeout, result;
+                    var timeout,
+                        result;
+
                     return function() {
                         var context = this,
                             args = arguments;
 
                         var later = function() {
                             timeout = null;
+
                             if (!immediate) {
                                 result = func.apply(context, args);
                             }
@@ -49,36 +62,55 @@ angular.module('angular-accordion', [])
                     };
                 };
 
-                window.onresize = debounce(function() {
-                    angular.forEach(MessageBus.accordionPaneScopes, function(childScope) {
+                $scope.restoreActiveScope = function(isResize) {
+                    angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(childScope) {
                         childScope.collapse(true, true);
 
                         if(childScope.isActive) {
-                            var paneHeight = childScope.calculatePaneContentHeight(true);
+                            var paneHeight = childScope.calculatePaneContentHeight(isResize);
                             childScope.getPaneContentJqLite().css('height', paneHeight);
+                            return;
                         }
                     });
-                }, 1000);
+                };
+
+                window.onresize = debounce(function() {
+                    $scope.restoreActiveScope(true), 1000
+                });
             }]
         };
-    })
-    .directive('angularAccordionPane', ['MessageBus', function(MessageBus) {
+    }])
+    .directive('angularAccordionPane', ['AngularAccordionMessageBus', function(AngularAccordionMessageBus) {
         return {
             restrict: 'EA',
             template:
                 '<div class="angular-accordion-container">' +
                     '<div class="angular-accordion-header" data-ng-click="collapse(false, false)" data-ng-class="{ angularaccordionheaderselected: isActive }">' +
-                        '{{ title }}</div>' +
-                    '<div class="angular-accordion-pane" style="overflow: auto;" data-ng-transclude></div>' +
-                '</div>',
+                    '{{ title }}</div>' +
+                    '<div class="angular-accordion-pane" data-ng-transclude></div>' +
+                    '</div>',
             replace: true,
             transclude: true,
             controller: ['$scope', function($scope) {
                 $scope.isActive = false;
-                MessageBus.accordionPaneScopes.push($scope);
+                AngularAccordionMessageBus.accordionPaneScopes.push($scope);
             }],
             link: function(scope, element, attributes, controller) {
                 scope.previousStyles = {};
+
+                var setIsActiveFromTemplateInMessageBusListOfScopes = function() {
+                    if(attributes.isActive === 'true') {
+                        scope.isActive = true;
+
+                        angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(iteratedScope, index) {
+                            // update this scope in the messagebus list of scopes so we have it for expanding panes from the template
+                            if(iteratedScope.$id == scope.$id) {
+                                AngularAccordionMessageBus.accordionPaneScopes[index].isActive = true;
+                                return;
+                            }
+                        });
+                    }
+                }
 
                 var heightPaddingBorderMarginZeroed = {
                     'padding-top': '0px',
@@ -135,7 +167,7 @@ angular.module('angular-accordion', [])
                     var paneContentElement = element.children()[1];
 
                     var containerHeight = document.getElementById('angular-accordion-container').offsetHeight;
-                    var panesCount = MessageBus.accordionPaneScopes.length;
+                    var panesCount = AngularAccordionMessageBus.accordionPaneScopes.length;
                     var paneContainerPaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(paneContainerElement);
                     var paneTitleOuterHeight = getElementOuterHeight(paneTitleElement);
                     var paneContentPaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(paneContentElement);
@@ -162,18 +194,17 @@ angular.module('angular-accordion', [])
                     var paneContentJquery = $(element.children()[1]);
 
                     if(!scope.isActive && !force) {
-                        angular.forEach(MessageBus.accordionPaneScopes, function(iteratedScope) {
+                        angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(iteratedScope, index) {
                             iteratedScope.collapse(true, false);
+
+                            // update this scope in the messagebus list of scopes so we have it for resize operations
+                            if(iteratedScope.$id == scope.$id) {
+                                AngularAccordionMessageBus.accordionPaneScopes[index].isActive = true;
+                                return;
+                            }
                         });
 
                         scope.isActive = true;
-
-                        // update this scope in the messagebus list of scopes so we have it for resize operations
-                        angular.forEach(MessageBus.accordionPaneScopes, function(iteratedScope, index) {
-                            if(iteratedScope.$id == scope.$id) {
-                                MessageBus.accordionPaneScopes[index].isActive = true;
-                            }
-                        });
 
                         var paneHeight = scope.calculatePaneContentHeight(false);
 
@@ -197,6 +228,8 @@ angular.module('angular-accordion', [])
                 scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
 
                 scope.collapse(true, false);
+
+                setIsActiveFromTemplateInMessageBusListOfScopes();
             },
             scope: {
                 title: '@'
