@@ -3,6 +3,112 @@ angular.module('angular-accordion', [])
         var self = this;
 
         self.accordionPaneScopes = [];
+        self.lastExpandedScopeId = 0;
+
+        var heightPaddingBorderMarginZeroed = {
+            'padding-top': '0px',
+            'padding-bottom': '0px',
+            'border-top': '0px',
+            'border-bottom': '0px',
+            'margin-top': '0px',
+            'margin-bottom': '0px',
+            'height': '0px'
+        };
+
+        // debounce() method is slightly modified version of:
+        // Underscore.js 1.4.4
+        // http://underscorejs.org
+        // (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
+        // Underscore may be freely distributed under the MIT license.
+        var debounce = function(func, wait, immediate) {
+            var timeout,
+                result;
+
+            return function() {
+                var context = this,
+                    args = arguments,
+                    callNow = immediate && !timeout;
+
+                var later = function() {
+                    timeout = null;
+
+                    if (!immediate) {
+                        result = func.apply(context, args);
+                    }
+                };
+
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+
+                if (callNow) {
+                    result = func.apply(context, args);
+                }
+
+                return result;
+            };
+        };
+
+        var animatedCollapse = function(paneContentJquery, scope) {
+            scope.isActive = false;
+
+            paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
+
+            if(typeof(window[scope.$parent.collapsedEventHandlerName]) !== 'undefined') {
+                window[scope.$parent.collapsedEventHandlerName]();
+            }
+        };
+
+        var nonAnimatedExpand = function(paneContentJqLite, scope) {
+            var paneHeight = scope.calculatePaneContentHeight(false);
+            paneContentJqLite.css('height', paneHeight);
+        };
+
+        var nonAnimatedCollapse = function(paneContentJqLite) {
+            paneContentJqLite.css(heightPaddingBorderMarginZeroed);
+        };
+
+        // the reason for passing both the jquery and jqlite objects is to show where to cut when removing the
+        // jquery dependency
+        var animatedExpand = function(paneContentJquery, paneContentJqLite, scope) {
+            self.lastExpandedScopeId = scope.$id;
+
+            var paneHeight = scope.calculatePaneContentHeight(false);
+
+            paneContentJqLite.removeAttr('style');
+            paneContentJqLite.css('height', '0px');
+
+            paneContentJquery.animate({ height: paneHeight }, 100);
+        };
+
+        self.collapseExpand = function(animate) {
+            angular.forEach(self.accordionPaneScopes, function(iteratedScope, index) {
+                // TODO: remove the dependency here on jquery for non IE9< by getting the new angular css3 based animation working,
+                // while still allowing IE9< to animate if jquery is present
+                var paneContentJquery = iteratedScope.getPaneContentJquery();
+
+                var paneContentJqLite = iteratedScope.getPaneContentJqLite();
+                var expanding = iteratedScope.isActive;
+                var collapsing = !iteratedScope.isActive;
+
+                if(collapsing && animate) {
+                    animatedCollapse(paneContentJquery, iteratedScope);
+                } else if(collapsing && !animate) {
+                    nonAnimatedCollapse(paneContentJqLite);
+                } else if(expanding && animate) {
+                    animatedExpand(paneContentJquery, paneContentJqLite, iteratedScope);
+                } else if(expanding && !animate) {
+                    nonAnimatedExpand(paneContentJqLite, iteratedScope);
+                }
+            });
+        };
+
+        self.restoreActiveScope = function(isResize) {
+            self.collapseExpand(false);
+        };
+
+        window.onresize = debounce(function() {
+            self.restoreActiveScope(true);
+        }, 50);
 
         return self;
     })
@@ -22,70 +128,18 @@ angular.module('angular-accordion', [])
 
                 $timeout(function() {
                     if(AngularAccordionMessageBus.accordionPaneScopes.length === childCount) {
-                        scope.restoreActiveScope(false);
+                        AngularAccordionMessageBus.restoreActiveScope(false);
                     }
                 }, 1);
-            },
-            controller: ['$scope', function($scope) {
-                // debounce() method is slightly modified (added brackets for conditionals and whitespace for readability) version of:
-                // Underscore.js 1.4.4
-                // http://underscorejs.org
-                // (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
-                // Underscore may be freely distributed under the MIT license.
-                var debounce = function(func, wait, immediate) {
-                    var timeout,
-                        result;
-
-                    return function() {
-                        var context = this,
-                            args = arguments;
-
-                        var later = function() {
-                            timeout = null;
-
-                            if (!immediate) {
-                                result = func.apply(context, args);
-                            }
-                        };
-
-                        var callNow = immediate && !timeout;
-
-                        clearTimeout(timeout);
-
-                        timeout = setTimeout(later, wait);
-
-                        if (callNow) {
-                            result = func.apply(context, args);
-                        }
-
-                        return result;
-                    };
-                };
-
-                $scope.restoreActiveScope = function(isResize) {
-                    angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(childScope) {
-                        childScope.collapse(true, true);
-
-                        if(childScope.isActive) {
-                            var paneHeight = childScope.calculatePaneContentHeight(isResize);
-                            childScope.getPaneContentJqLite().css('height', paneHeight);
-                            return;
-                        }
-                    });
-                };
-
-                window.onresize = debounce(function() {
-                    $scope.restoreActiveScope(true);
-                }, 50);
-            }]
+            }
         };
     }])
-    .directive('angularAccordionPane', ['AngularAccordionMessageBus', function(AngularAccordionMessageBus) {
+    .directive('angularAccordionPane', ['AngularAccordionMessageBus', '$timeout', function(AngularAccordionMessageBus, $timeout) {
         return {
             restrict: 'EA',
             template:
                 '<div class="angular-accordion-container">' +
-                    '<div class="angular-accordion-header" data-ng-click="collapse(false, false)" data-ng-class="{ angularaccordionheaderselected: isActive }">' +
+                    '<div class="angular-accordion-header" data-ng-click="childExpandCollapse(true)" data-ng-class="{ angularaccordionheaderselected: isActive }">' +
                     '{{ title }}</div>' +
                     '<div class="angular-accordion-pane" data-ng-transclude></div>' +
                     '</div>',
@@ -111,16 +165,6 @@ angular.module('angular-accordion', [])
                         });
                     }
                 }
-
-                var heightPaddingBorderMarginZeroed = {
-                    'padding-top': '0px',
-                    'padding-bottom': '0px',
-                    'border-top': '0px',
-                    'border-bottom': '0px',
-                    'margin-top': '0px',
-                    'margin-bottom': '0px',
-                    'height': '0px'
-                };
 
                 var convertCssNumberToJavascriptNumber = function(cssNumber) {
                     if(typeof(cssNumber) === 'undefined' || cssNumber === '') {
@@ -161,6 +205,12 @@ angular.module('angular-accordion', [])
                     return paneContentJqLite;
                 };
 
+                scope.getPaneContentJquery = function() {
+                    var paneContentJquery = $(element.children()[1]);
+
+                    return paneContentJquery;
+                };
+
                 scope.calculatePaneContentHeight = function(isResize) {
                     var paneContainerElement = element[0];
                     var paneTitleElement = element.children()[0];
@@ -186,48 +236,19 @@ angular.module('angular-accordion', [])
                     return paneHeight + 'px';
                 };
 
-                scope.collapse = function(force, isResize) {
-                    var paneContentJqLite = angular.element(element.children()[1]);
-
-                    // TODO: remove the dependency here on jquery for non IE10< by getting the new angular css based animation working
-                    // TODO: extract only the jquery animation code from jquery for animating in IE9<
-                    var paneContentJquery = $(element.children()[1]);
-
-                    if(!scope.isActive && !force) {
-                        angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(iteratedScope, index) {
-                            iteratedScope.collapse(true, false);
-
-                            // update this scope in the messagebus list of scopes so we have it for resize operations
-                            if(iteratedScope.$id == scope.$id) {
-                                AngularAccordionMessageBus.accordionPaneScopes[index].isActive = true;
-                                return;
-                            }
-                        });
-
-                        scope.isActive = true;
-
-                        var paneHeight = scope.calculatePaneContentHeight(false);
-
-                        paneContentJqLite.removeAttr('style');
-                        paneContentJqLite.css('height', '0px');
-
-                        paneContentJquery.animate({ height: paneHeight }, 100);
-                    } else if(!force) {
-                        scope.isActive = false;
-                        paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
-
-                        if(typeof(scope.$parent.collapsedEventHandlerName) !== 'undefined') {
-                            window[scope.$parent.collapsedEventHandlerName]();
+                scope.childExpandCollapse = function(animate) {
+                    angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(accordionPaneScope, index) {
+                        if(scope.$id === accordionPaneScope.$id) {
+                            AngularAccordionMessageBus.accordionPaneScopes[index].isActive = !AngularAccordionMessageBus.accordionPaneScopes[index].isActive;
+                        } else {
+                            AngularAccordionMessageBus.accordionPaneScopes[index].isActive = false;
                         }
-                    } else if (!isResize) {
-                        scope.isActive = false;
-                        paneContentJqLite.css(heightPaddingBorderMarginZeroed);
-                    }
+                    });
+
+                    AngularAccordionMessageBus.collapseExpand(animate);
                 };
 
                 scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
-
-                scope.collapse(true, false);
 
                 setIsActiveFromTemplateInMessageBusListOfScopes();
             },
