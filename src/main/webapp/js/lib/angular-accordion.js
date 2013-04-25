@@ -128,6 +128,7 @@ angular.module('angular-accordion', [])
 
                 $timeout(function() {
                     if(AngularAccordionMessageBus.accordionPaneScopes.length === childCount) {
+                        AngularAccordionMessageBus.accordionPaneDomNodeCount = childCount;
                         AngularAccordionMessageBus.restoreActiveScope(false);
                     }
                 }, 1);
@@ -147,6 +148,13 @@ angular.module('angular-accordion', [])
             transclude: true,
             controller: ['$scope', function($scope) {
                 $scope.isActive = false;
+
+                // don't add duplicate entries in the list when the route changes.
+                // instead, delete the old entries and update them with the new ones
+                if(AngularAccordionMessageBus.accordionPaneDomNodeCount === AngularAccordionMessageBus.accordionPaneScopes.length) {
+                    AngularAccordionMessageBus.accordionPaneScopes = [];
+                }
+
                 AngularAccordionMessageBus.accordionPaneScopes.push($scope);
             }],
             link: function(scope, element, attributes, controller) {
