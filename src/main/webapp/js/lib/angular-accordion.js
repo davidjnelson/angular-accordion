@@ -1,116 +1,119 @@
 angular.module('angular-accordion', [])
-    .service('AngularAccordionMessageBus', function() {
-        var self = this;
+    .factory('AngularAccordionMessageBus', function() {
+        // create a constructor function that the parent directive can instantiate in its controller
+        var AngularAccordionMessageBus = function() {
+            var self = this;
 
-        self.accordionPaneScopes = [];
-        self.lastExpandedScopeId = 0;
+            self.accordionPaneScopes = [];
+            self.lastExpandedScopeId = 0;
 
-        var heightPaddingBorderMarginZeroed = {
-            'padding-top': '0px',
-            'padding-bottom': '0px',
-            'border-top': '0px',
-            'border-bottom': '0px',
-            'margin-top': '0px',
-            'margin-bottom': '0px',
-            'height': '0px'
-        };
+            var heightPaddingBorderMarginZeroed = {
+                'padding-top': '0px',
+                'padding-bottom': '0px',
+                'border-top': '0px',
+                'border-bottom': '0px',
+                'margin-top': '0px',
+                'margin-bottom': '0px',
+                'height': '0px'
+            };
 
-        // debounce() method is slightly modified version of:
-        // Underscore.js 1.4.4
-        // http://underscorejs.org
-        // (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
-        // Underscore may be freely distributed under the MIT license.
-        var debounce = function(func, wait, immediate) {
-            var timeout,
-                result;
+            // debounce() method is slightly modified version of:
+            // Underscore.js 1.4.4
+            // http://underscorejs.org
+            // (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
+            // Underscore may be freely distributed under the MIT license.
+            var debounce = function(func, wait, immediate) {
+                var timeout,
+                    result;
 
-            return function() {
-                var context = this,
-                    args = arguments,
-                    callNow = immediate && !timeout;
+                return function() {
+                    var context = this,
+                        args = arguments,
+                        callNow = immediate && !timeout;
 
-                var later = function() {
-                    timeout = null;
+                    var later = function() {
+                        timeout = null;
 
-                    if (!immediate) {
+                        if (!immediate) {
+                            result = func.apply(context, args);
+                        }
+                    };
+
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+
+                    if (callNow) {
                         result = func.apply(context, args);
                     }
+
+                    return result;
                 };
-
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-
-                if (callNow) {
-                    result = func.apply(context, args);
-                }
-
-                return result;
             };
-        };
 
-        var animatedCollapse = function(paneContentJquery, scope) {
-            scope.isActive = false;
+            var animatedCollapse = function(paneContentJquery, scope) {
+                scope.isActive = false;
 
-            paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
+                paneContentJquery.animate(heightPaddingBorderMarginZeroed, 100);
 
-            if(typeof(window[scope.$parent.collapsedEventHandlerName]) !== 'undefined') {
-                window[scope.$parent.collapsedEventHandlerName]();
-            }
-        };
-
-        var nonAnimatedExpand = function(paneContentJqLite, scope) {
-            var paneHeight = scope.calculatePaneContentHeight(false);
-            paneContentJqLite.css('height', paneHeight);
-        };
-
-        var nonAnimatedCollapse = function(paneContentJqLite) {
-            paneContentJqLite.css(heightPaddingBorderMarginZeroed);
-        };
-
-        // the reason for passing both the jquery and jqlite objects is to show where to cut when removing the
-        // jquery dependency
-        var animatedExpand = function(paneContentJquery, paneContentJqLite, scope) {
-            self.lastExpandedScopeId = scope.$id;
-
-            var paneHeight = scope.calculatePaneContentHeight(false);
-
-            paneContentJqLite.removeAttr('style');
-            paneContentJqLite.css('height', '0px');
-
-            paneContentJquery.animate({ height: paneHeight }, 100);
-        };
-
-        self.collapseExpand = function(animate) {
-            angular.forEach(self.accordionPaneScopes, function(iteratedScope, index) {
-                // TODO: remove the dependency here on jquery for non IE9< by getting the new angular css3 based animation working,
-                // while still allowing IE9< to animate if jquery is present
-                var paneContentJquery = iteratedScope.getPaneContentJquery();
-
-                var paneContentJqLite = iteratedScope.getPaneContentJqLite();
-                var expanding = iteratedScope.isActive;
-                var collapsing = !iteratedScope.isActive;
-
-                if(collapsing && animate) {
-                    animatedCollapse(paneContentJquery, iteratedScope);
-                } else if(collapsing && !animate) {
-                    nonAnimatedCollapse(paneContentJqLite);
-                } else if(expanding && animate) {
-                    animatedExpand(paneContentJquery, paneContentJqLite, iteratedScope);
-                } else if(expanding && !animate) {
-                    nonAnimatedExpand(paneContentJqLite, iteratedScope);
+                if(typeof(window[scope.$parent.collapsedEventHandlerName]) !== 'undefined') {
+                    window[scope.$parent.collapsedEventHandlerName]();
                 }
-            });
+            };
+
+            var nonAnimatedExpand = function(paneContentJqLite, scope) {
+                var paneHeight = scope.calculatePaneContentHeight(false);
+                paneContentJqLite.css('height', paneHeight);
+            };
+
+            var nonAnimatedCollapse = function(paneContentJqLite) {
+                paneContentJqLite.css(heightPaddingBorderMarginZeroed);
+            };
+
+            // the reason for passing both the jquery and jqlite objects is to show where to cut when removing the
+            // jquery dependency
+            var animatedExpand = function(paneContentJquery, paneContentJqLite, scope) {
+                self.lastExpandedScopeId = scope.$id;
+
+                var paneHeight = scope.calculatePaneContentHeight(false);
+
+                paneContentJqLite.removeAttr('style');
+                paneContentJqLite.css('height', '0px');
+
+                paneContentJquery.animate({ height: paneHeight }, 100);
+            };
+
+            self.collapseExpand = function(animate) {
+                angular.forEach(self.accordionPaneScopes, function(iteratedScope, index) {
+                    // TODO: remove the dependency here on jquery for non IE9< by getting the new angular css3 based animation working,
+                    // while still allowing IE9< to animate if jquery is present
+                    var paneContentJquery = iteratedScope.getPaneContentJquery();
+
+                    var paneContentJqLite = iteratedScope.getPaneContentJqLite();
+                    var expanding = iteratedScope.isActive;
+                    var collapsing = !iteratedScope.isActive;
+
+                    if(collapsing && animate) {
+                        animatedCollapse(paneContentJquery, iteratedScope);
+                    } else if(collapsing && !animate) {
+                        nonAnimatedCollapse(paneContentJqLite);
+                    } else if(expanding && animate) {
+                        animatedExpand(paneContentJquery, paneContentJqLite, iteratedScope);
+                    } else if(expanding && !animate) {
+                        nonAnimatedExpand(paneContentJqLite, iteratedScope);
+                    }
+                });
+            };
+
+            self.restoreActiveScope = function(isResize) {
+                self.collapseExpand(false);
+            };
+
+            window.onresize = debounce(function() {
+                self.restoreActiveScope(true);
+            }, 50);
         };
 
-        self.restoreActiveScope = function(isResize) {
-            self.collapseExpand(false);
-        };
-
-        window.onresize = debounce(function() {
-            self.restoreActiveScope(true);
-        }, 50);
-
-        return self;
+        return AngularAccordionMessageBus;
     })
     .directive('angularAccordion', ['AngularAccordionMessageBus', '$timeout', function(AngularAccordionMessageBus, $timeout) {
         return {
@@ -118,6 +121,9 @@ angular.module('angular-accordion', [])
             template: '<div data-ng-transclude></div>',
             replace: true,
             transclude: true,
+            controller: ['$scope', function($scope) {
+                $scope.AngularAccordionMessageBus = new AngularAccordionMessageBus();
+            }],
             link: function(scope, element, attributes, controller) {
                 scope.collapsedEventHandlerName = attributes.onCollapsed;
 
@@ -127,15 +133,15 @@ angular.module('angular-accordion', [])
                 var childCount = element.children().length;
 
                 $timeout(function() {
-                    if(AngularAccordionMessageBus.accordionPaneScopes.length === childCount) {
-                        AngularAccordionMessageBus.accordionPaneDomNodeCount = childCount;
-                        AngularAccordionMessageBus.restoreActiveScope(false);
+                    if(scope.AngularAccordionMessageBus.accordionPaneScopes.length === childCount) {
+                        scope.AngularAccordionMessageBus.accordionPaneDomNodeCount = childCount;
+                        scope.AngularAccordionMessageBus.restoreActiveScope(false);
                     }
                 }, 1);
             }
         };
     }])
-    .directive('angularAccordionPane', ['AngularAccordionMessageBus', '$timeout', function(AngularAccordionMessageBus, $timeout) {
+    .directive('angularAccordionPane', function() {
         return {
             restrict: 'EA',
             template:
@@ -148,14 +154,16 @@ angular.module('angular-accordion', [])
             transclude: true,
             controller: ['$scope', function($scope) {
                 $scope.isActive = false;
+                // TODO: why is this not available in the prototype chain directly, and why do we have to go up two scopes to read it?
+                $scope.AngularAccordionMessageBus = $scope.$parent.$parent.AngularAccordionMessageBus;
 
                 // don't add duplicate entries in the list when the route changes.
                 // instead, delete the old entries and update them with the new ones
-                if(AngularAccordionMessageBus.accordionPaneDomNodeCount === AngularAccordionMessageBus.accordionPaneScopes.length) {
-                    AngularAccordionMessageBus.accordionPaneScopes = [];
+                if($scope.AngularAccordionMessageBus.accordionPaneDomNodeCount === $scope.AngularAccordionMessageBus.accordionPaneScopes.length) {
+                    $scope.AngularAccordionMessageBus.accordionPaneScopes = [];
                 }
 
-                AngularAccordionMessageBus.accordionPaneScopes.push($scope);
+                $scope.AngularAccordionMessageBus.accordionPaneScopes.push($scope);
             }],
             link: function(scope, element, attributes, controller) {
                 scope.previousStyles = {};
@@ -164,10 +172,10 @@ angular.module('angular-accordion', [])
                     if(attributes.isActive === 'true') {
                         scope.isActive = true;
 
-                        angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(iteratedScope, index) {
+                        angular.forEach(scope.AngularAccordionMessageBus.accordionPaneScopes, function(iteratedScope, index) {
                             // update this scope in the messagebus list of scopes so we have it for expanding panes from the template
                             if(iteratedScope.$id == scope.$id) {
-                                AngularAccordionMessageBus.accordionPaneScopes[index].isActive = true;
+                                scope.AngularAccordionMessageBus.accordionPaneScopes[index].isActive = true;
                                 return;
                             }
                         });
@@ -225,7 +233,7 @@ angular.module('angular-accordion', [])
                     var paneContentElement = element.children()[1];
 
                     var containerHeight = document.getElementById('angular-accordion-container').offsetHeight;
-                    var panesCount = AngularAccordionMessageBus.accordionPaneScopes.length;
+                    var panesCount = scope.AngularAccordionMessageBus.accordionPaneScopes.length;
                     var paneContainerPaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(paneContainerElement);
                     var paneTitleOuterHeight = getElementOuterHeight(paneTitleElement);
                     var paneContentPaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(paneContentElement);
@@ -245,15 +253,15 @@ angular.module('angular-accordion', [])
                 };
 
                 scope.childExpandCollapse = function(animate) {
-                    angular.forEach(AngularAccordionMessageBus.accordionPaneScopes, function(accordionPaneScope, index) {
+                    angular.forEach(scope.AngularAccordionMessageBus.accordionPaneScopes, function(accordionPaneScope, index) {
                         if(scope.$id === accordionPaneScope.$id) {
-                            AngularAccordionMessageBus.accordionPaneScopes[index].isActive = !AngularAccordionMessageBus.accordionPaneScopes[index].isActive;
+                            scope.AngularAccordionMessageBus.accordionPaneScopes[index].isActive = !scope.AngularAccordionMessageBus.accordionPaneScopes[index].isActive;
                         } else {
-                            AngularAccordionMessageBus.accordionPaneScopes[index].isActive = false;
+                            scope.AngularAccordionMessageBus.accordionPaneScopes[index].isActive = false;
                         }
                     });
 
-                    AngularAccordionMessageBus.collapseExpand(animate);
+                    scope.AngularAccordionMessageBus.collapseExpand(animate);
                 };
 
                 scope.previousContentPanePaddingMarginAndBorderHeight = getElementPaddingMarginAndBorderHeight(angular.element(element.children()[1]));
@@ -264,4 +272,4 @@ angular.module('angular-accordion', [])
                 title: '@'
             }
         };
-    }]);
+    });
