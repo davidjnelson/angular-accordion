@@ -1,7 +1,7 @@
 angular-accordion
 =================
 
-An angular accordion which auto stretches to its container height and width while debouncing height recalculation on resize.  Works in modern browsers and IE9+.
+An angular accordion directive which auto stretches to its container height and width while debouncing height recalculation on resize.  Works in modern browsers and IE9+.
 
 Usage:
 
