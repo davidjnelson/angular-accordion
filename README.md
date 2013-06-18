@@ -11,7 +11,7 @@ Usage:
 4. include angular-accordion.css
 5. put the following markup in your template: 
 
-`
+```html
 <div data-ng-app="demo" style="height: 100%; width: 100%; position: absolute;" id="angular-accordion-container">
   <div data-angular-accordion data-on-collapsed="angularAccordionDemoOnCollapsedHandler">
       <div data-angular-accordion-pane data-title="Pane 1">
@@ -26,7 +26,7 @@ Usage:
       </div>
   </div>
 </div>
-`
+```
 
 Demo:
 
