@@ -17,7 +17,12 @@
 }
 
 .angular-accordion-container {
-    margin: 3px;
+    height: 100%;
+    width: 100%;
+}
+
+.angular-accordion-pane {
+    padding: 2px;
 }
 
 .angularaccordionheaderselected {
@@ -34,11 +39,9 @@
     text-decoration: underline !important;
 }
 
-.angular-accordion-pane {
-    padding: 25px;
+.angular-accordion-pane-content {
+    padding: 5px;
     overflow-y: auto;
-    font-family: Helvetica, Arial, sans-serif;
-    font-size: 16px;
     border-left: 1px solid #bbb;
     border-right: 1px solid #bbb;
     border-bottom: 1px solid #bbb;
@@ -48,4 +51,8 @@
     -moz-border-radius-bottomright: 5px;
     border-bottom-left-radius: 5px;
     border-bottom-right-radius: 5px;
+}
+
+.angulardisabledpane {
+    opacity: .2;
 }
