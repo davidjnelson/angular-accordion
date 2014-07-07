@@ -1,0 +1,33 @@
+{
+  "name": "angular-accordion",
+  "version": "1.1.0",
+  "homepage": "https://github.com/davidjnelson/angular-accordion",
+  "authors": [
+    "David Nelson <david.jonathan.nelson@gmail.com>"
+  ],
+  "description": "An accordion component for Angular.js",
+  "main": [
+    "src/main/webapp/js/lib/angular-accordion.js",
+    "src/main/webapp/css/angular-accordion.css"
+  ],
+  "keywords": [
+    "angular",
+    "accordion"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "pom.xml",
+    "src/main/webapp/index.html",
+    "src/main/webapp/js/demo.js",
+    "src/main/webapp/js/lib/jquery.js",
+    "src/main/webapp/js/lib/angular.js"
+  ],
+  "dependencies": {
+    "angular": ">=1.2.19",
+    "jquery": ">=1.11.1"
+  }
+}
