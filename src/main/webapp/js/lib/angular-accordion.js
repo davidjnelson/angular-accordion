@@ -28,7 +28,10 @@ angular.module('angular-accordion', [])
             restrict: 'EA',
             transclude: true,
             replace: true,
-            template: '<div ng-transclude class="angular-accordion-pane"></div>'
+            template: '<div ngRepeat="{{ngRepeat}}" ng-transclude class="angular-accordion-pane"></div>',
+            scope: {
+                    ngRepeat: "&"
+            }
         };
     })
     .directive('paneHeader', ['$window', 'Debounce', function($window, Debounce) {
