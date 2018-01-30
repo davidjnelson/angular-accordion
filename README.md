@@ -3,6 +3,12 @@ angular-accordion
 
 An angular accordion directive which auto stretches to its container height and width while debouncing height recalculation on resize.  Works in modern browsers and IE9+.
 
+Sponsored By
+------------
+
+[Copy the Shrug Emoji](https://copyshrugemoji.com)
+==================================================
+
 Usage:
 
 1. include angular
